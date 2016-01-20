@@ -1,0 +1,324 @@
+\documentclass[11pt]{article}
+\usepackage{subfig}
+\usepackage[top = 1in, bottom = 1in,
+left = 1in, right = 1in]{geometry}
+\usepackage{amsfonts}
+\usepackage{listings} 
+\usepackage{graphicx}
+\usepackage{subfig}
+\newcommand{\forceindent}{\leavevmode{\parindent=1em\indent}}
+\usepackage{MnSymbol}
+\usepackage{fancyvrb}
+\newcommand{\ts}{\textsuperscript}
+\usepackage{setspace}  
+\usepackage{float}
+\restylefloat{table}
+
+\usepackage[style=verbose-ibid,backend=bibtex]{biblatex}
+
+\usepackage{filecontents}% to embed the file `myreferences.bib` in your `.tex` file
+
+\begin{filecontents}{r4.bib}
+\bibliographystyle{./IEEEtran}
+\bibliography{./IEEEabrv,./IEEEexample}
+
+@electronic{astar,
+  author        = "Robin",
+  title         = "A* Algorithm",
+  organization	= "World of Computing",
+  url           = "http://intelligence.worldofcomputing.net/ai-search/a-star-algorithm.html#.Vk3XKr9UUhU", 
+  note          = "December 18, 2009",  
+}
+
+\end{filecontents}
+
+
+\addbibresource{r4.bib}
+
+\begin{document}
+
+\title{\textbf{EECS 3401: Report 4 Documentation}}
+\author{\textbf{Camillo John (CJ) D'Alimonte}\\ (212754396 - cjdal34) \\
+\& \\
+\textbf{Dinesh Kalia}\\ (213273420 - dinesh49)}
+\date {\textbf{November 19, 2015}}
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Abstract}
+\forceindent This report summarizes the methodologies used to complete the series of tasks provided in the \emph{Report 4 Specification}. It provides a detailed analysis as to the reasoning behind certain chosen heuristics, the successful implementation of various predicates as well as any difficulties encountered throughout the assigned tasks.
+\section{Introduction}
+\forceindent A mobile robot moves in the $xy$\nobreakdash-plane among various rectangular obstacles aligned on the $x$ and $y$ axes where $x \in \mathbb{R}$ and $y \in \mathbb{R}$. The robot has to plan a collision free path between its current position and its given goal position. Since the robot's travel requires adequate energy, it aims at minimizing the path length, the number of changes in direction and the total number of stops. The costs are outlined below.
+\begin{itemize}
+\item Travel cost is 1 per unit
+\item A change of direction costs 1 unit of travel distance.
+\item A start/stop occur between each node and costs 2 units of travel distance. 
+\end{itemize} 
+\forceindent The robot utilizes the A* and RTA* algorithms to find paths. The distance is calculated using two distinct methods. The formulas for each distance definition is provided below.\\ 
+\\
+Euclidean Distance: $ED = \sqrt{(X1-X2)^2+(Y1-Y2)^2}$ \\
+Manhattan Distance: $MD = |(X1-X2)| + |(Y1-Y2)|$ 
+
+\section{Design \& Implementation}
+\forceindent The following subsections outline the specific design decisions made during the implementation process of the program. The Professor had supplied us with various auxiliary files to assist in the development of our program.
+\subsection{Modification of \emph{Bratko's} A* Algorithm}
+\forceindent \emph{Bratko's} original implementation of the A* Algorithm, as shown in Listing 1, was modified by renaming the starting point as \textbf{astar} so that the algorithm was invoked with the call \textbf{astar(Start, Path)}. The algorithm was also altered in order to be able to use any \textbf{h} predicate out of an unbounded collection. 
+\begin{lstlisting}
+bestfirst( Start, Solution) :-
+expand( [], l( Start, 0/0),  9999, _, yes, Solution).	
+\end{lstlisting}
+\captionof{lstlisting}{Bratko's Implementation of A*} 
+\vspace{2 mm}
+
+\forceindent The \textbf{hstar(N,H)} predicate was added in order to accomplish the new functionality requested. This predicate replaced the call \textbf{h(N,H)} with \textbf{hstar(N,H)} in order to be able to get different heuristics, regardless of specifics, for the algorithm. It is also worth noting that the \textbf{Solution} argument in \textbf{bestfirst(Star, Solution)} has been exchanged with \textbf{Path} in accordance with the Professor's instructions. The modifications are shown below, in Listing 2.
+
+\begin{lstlisting}
+hstar(N,H) :-
+    h_functor(H_functor) , 
+    Function =.. [H_functor, N, H],
+    call(Function).
+
+astar( Start, Path ) :-
+    expand( [], l( Start, 0/0),  9999, _, yes, RP),
+    reverse(RP,Path).	
+\end{lstlisting}
+\captionof{lstlisting}{Modifications to Bratko's Implementation of A*}
+
+\subsection{Modification of \emph{Bratko's} RTA* Algorithm}
+\forceindent The only modification that needed to be made to the original algorithm was the ability to use the \textbf{h} predicate out of an unbounded collection. The new predicate is almost identical to the modifications of A* with the only change being the use of a more appropriate name for this particular algorithm. The altered implementation is shown below in Listing 3.  
+
+\begin{lstlisting}
+rta_star(N,H) :-
+    h_functor(H_functor) , 
+    Function =.. [H_functor, N, H],
+    call(Function).	
+\end{lstlisting}
+\captionof{lstlisting}{Modifications to Bratko's Implementation of RTA*}
+
+\subsection{Main Body of Code}
+\forceindent The first step in implementing the program was to develop the two distance equations that were used in making the robot move across the maze. The predicates were simply written with respect to the formulas outlined in the \emph{Introduction}. The distance predicates are as follows:
+\begin{lstlisting}
+euclidian(X,Y,X1,Y1,He) :-
+    He is sqrt((X-X1)*(X-X1)+(Y-Y1)*(Y-Y1)).
+
+manhattan(X,Y,X1,Y1,Hm) :-
+    Hm is (abs(X-X1) + abs(Y-Y1)).
+\end{lstlisting}
+\captionof{lstlisting}{Distance Formulas in Predicate Form}
+\vspace{2 mm}
+\forceindent The coordinates of three obstacles were chosen randomly although an emphasis was made to make sure that the obstacles did in fact make sense given the requirements of the program. The hard coded obstacles are listed below.
+\begin{lstlisting} 
+obstacle(2/1, 6/2).
+obstacle(5/5, 6/8).
+obstacle(4/3, 4/5).
+\end{lstlisting}
+\captionof{lstlisting}{Maze Obstacles}
+\vspace{2 mm}
+\forceindent The next step was the implementation of the A* and RTA* algorithms. The RTA* algorithm was based off of the \textbf{rta} routine in \emph{f13\_10\_RTA.pl} as well as our course slides. Two new functors, \textbf{Hfunc} and \textbf{Goal} were created. Using the built-in predicate \textbf{retract}, the removal of the old h\_functor(\_) was implemented. \textbf{Asserta}, another built-in predicate, was used to add the new functor to the database which allowed the use of either the Euclidean or Manhattan based calculations. The old final goal was removed from the database and a new specified goal was added according to the same principles as \textbf{Hfunc}. The final step was to call the rta routine from the \emph{f13\_10\_RTA.pl} file. The A*  algorithm's implementation was identical with the only modification being the final call to the \textbf{astar} predicate from the \emph{f12\_3\_Astar.pl} file. \\
+\\
+\forceindent The \textbf{s(State, NewState, Cost)} predicate was one of the most important predicates in the program. It controlled the progress of the robot as it searched for an appropriate path. The goal state had to determine the possibility of moving in all four directions: North, South, East and West. The implementation of the \textbf{s} predicate involved the calling of four other specific directional predicates. The main structure is the same throughout all four predicates with the only difference being the directional values (i.e. +1, -1 depending on direction heading). Both the \textbf{s} predicate as well as one of its auxiliary predicates, \textbf{s\_east}, is outlined below.
+
+\begin{lstlisting} 
+s(Start_X/Start_Y/Start_Dir, End_X/End_Y/End_Dir, Cost) :-
+
+goal(GoalX/GoalY/_),
+( 
+s_north(Start_X/Start_Y/Start_Dir, GoalX/GoalY/_, End_X/End_Y/End_Dir, Cost)
+; s_south(Start_X/Start_Y/Start_Dir, GoalX/GoalY/_, End_X/End_Y/End_Dir, Cost)		
+; s_east(Start_X/Start_Y/Start_Dir, GoalX/GoalY/_, End_X/End_Y/End_Dir, Cost)
+; s_west(Start_X/Start_Y/Start_Dir, GoalX/GoalY/_, End_X/End_Y/End_Dir, Cost)
+).
+\end{lstlisting}
+\captionof{lstlisting}{\textbf{s} Predicate}
+\vspace{2 mm}
+\begin{lstlisting}  
+s_east(Start_X/Start_Y/Start_Dir, GoalX/_/_, End_X/End_Y/End_Dir, Cost) :-
+	GoalX > Start_X,
+	east_obs(Start_X/Start_Y, _/Miny, _/Maxy, Boolvalue),
+	( 	
+	Boolvalue = false,
+	findAllEast(Start_X/Start_Y,GoalX,MaxX),
+	End_X = MaxX, End_Y = Start_Y, End_Dir = east,
+	(Start_Dir \= east , !, NewCost = 1 ; NewCost = 0),
+	Cost is MaxX - Start_X + NewCost
+	;
+	Boolvalue = true, End_X = Start_X,
+	( End_Y = Miny, End_Dir = south, Cost is Start_Y - Miny + 1
+	; End_Y = Maxy, End_Dir = north, Cost is Maxy - Start_Y + 1
+    )
+  ).
+\end{lstlisting}
+\captionof{lstlisting}{\textbf{s\_east} Predicate}
+\vspace{2 mm}
+\forceindent The \textbf{s\_east} predicate checks if there is an obstacle on the $X$\nobreakdash-plane, east of the robot's current position/state. If there is an obstacle, then the robot tries to move along one of its corners (i.e.: travel in the opposite axis and move along the boundary of the obstacle). If there is no obstacle impeding the robot's path, then the robot continues to travel eastward. The assumption is made that the robot is dimensionless and is able to move between two obstacles if they are right next to each other. \\
+
+\forceindent Two auxiliary predicates are used for determining the movement in the east direction: \textbf{east\_obs} and \textbf{findAllEast}. \textbf{east\_obs} checks whether or not there is an obstacle to the east of the robot. If there is, then set the value of \emph{Boolvalue} to true (false otherwise).
+\textbf{findAllEast} utilizes the built-in \textbf{findall} predicate in order to find all the obstacles in the direction (east) of the robot. The \textbf{findall} ``sums up" the list of obstacles in that specific direction. \\
+
+
+\forceindent The implementation of a \textbf{run} predicate allowed for the testing of the program. The \textbf{run} predicate was used to find the path from a start node to a final, goal node. If the Algorithm specified is the \textbf{astar} routine then use \textbf{a\_star} routine. If the Algorithm specified was the \textbf{rta} routine, then use \textbf{rta\_alg} routine. The \textbf{run} predicate is listed below. 
+\begin{lstlisting} 
+run(Algorithm,H_functor,Start,Goal,Path):-  
+	((Algorithm = 'astar'), a_star(H_functor,Start,Goal,Path)) ; 
+	((Algorithm = 'rta'), rta_alg(H_functor,Start,Goal,Path)).
+\end{lstlisting}
+\captionof{lstlisting}{\textbf{run} Predicate}
+\vspace{2 mm} 
+
+
+\section{Assumptions}
+\forceindent The report specifications were often ambiguous and open to one's interpretation. An assumption was made regarding the last rule concerning the cost of a path. The requirement read ``A start/stop occurs between each node in the path and costs 2 units of travel distance." This was assumed to mean that it costed 1 unit of time to get from the start node to the stop node and another 1 unit of time for changing directions. The sum of these actions resulted in a total travelling distance of 2 units.
+
+\section{Testing}
+\forceindent Although no PLUnit test cases were written for this specific program, there was a pressing need to determine if the functionality of the implementation was correct. Therefore, command-line testing was used thoroughly to determine if the program behaved as expected while running the four specific algorithms. There were two distinct mazes used for testing purposes, as seen in Figures 1 (a) and (b).
+\begin{figure}[H]
+\centering
+\vspace{25mm}
+\subfloat[Maze 1]{}
+    \hspace{10cm}
+\subfloat[Maze 2]{}
+\caption{}
+\end{figure}
+
+\subsection{Task 1 - A* Algorithm with Euclidean distance heuristic}
+The output pertaining to Maze 1 and 2 is listed below. The program behaves as expected and the output is correct.	
+\begin{lstlisting}
+1 ?- run(astar, h_e, 5/4/east, 1/1/_, Path).
+Path = [5/4/east, 5/2/south, 1/2/west, 1/1/south] ;
+Path = [5/4/east, 4/4/west, 4/2/south, 1/2/west, 1/1/south] ;
+Path = [5/4/east, 4/4/west, 4/3/south, 1/3/west, 1/1/south] ;
+Path = [5/4/east, 4/4/west, 4/5/north, 4/2/south, 1/2/west, 1/1/south] ;
+Path = [5/4/east, 4/4/west, 4/5/north, 1/5/west, 1/1/south] ;
+Path = [5/4/east, 4/4/west, 4/3/south, 4/2/south, 1/2/west, 1/1/south] ;
+false.	
+\end{lstlisting}
+\captionof{lstlisting}{Testing on Maze 1}
+\vspace{2 mm}
+\begin{lstlisting}
+5 ?- run(astar, h_e, 3/1/west, 6/9/_, Path).
+Path = [3/1/west, 6/1/east, 6/9/north] ;
+Path = [3/1/west, 6/1/east, 6/9/north] ;
+Path = [3/1/west, 2/1/west, 2/9/north, 6/9/east] ;
+Path = [3/1/west, 2/1/west, 6/1/east, 6/9/north] ;
+false.	
+\end{lstlisting}
+\captionof{lstlisting}{Testing on Maze 2}
+\subsection{Task 2 - A* Algorithm with Manhattan distance heuristic}
+The output pertaining to Maze 1 and 2 is listed below. The program behaves as expected and the output is correct.	
+\begin{lstlisting}
+2 ?- run(astar, h_m, 5/4/east, 1/1/_, Path).
+Path = [5/4/east, 5/2/south, 1/2/west, 1/1/south] ;
+Path = [5/4/east, 4/4/west, 4/2/south, 1/2/west, 1/1/south] ;
+Path = [5/4/east, 4/4/west, 4/3/south, 1/3/west, 1/1/south] ;
+Path = [5/4/east, 4/4/west, 4/3/south, 4/2/south, 1/2/west, 1/1/south] ;
+Path = [5/4/east, 4/4/west, 4/5/north, 4/2/south, 1/2/west, 1/1/south] ;
+Path = [5/4/east, 4/4/west, 4/5/north, 1/5/west, 1/1/south] ;
+false.	
+\end{lstlisting}
+\captionof{lstlisting}{Testing on Maze 1}
+\vspace{2 mm}
+\forceindent Notice the difference between Listings 4 and 6, specifically in regards to the order of the 4\ts{th}, 5\ts{th}, and 6\ts{th} paths. This contrast in positions resulted from the use of the two different types of distance calculations, the Euclidean and Manhattan distances.
+\begin{lstlisting}
+6 ?- run(astar, h_m, 3/1/west, 6/9/_, Path).
+Path = [3/1/west, 6/1/east, 6/9/north] ;
+Path = [3/1/west, 6/1/east, 6/9/north] ;
+Path = [3/1/west, 2/1/west, 2/9/north, 6/9/east] ;
+Path = [3/1/west, 2/1/west, 6/1/east, 6/9/north] ;
+false.	
+\end{lstlisting}
+\captionof{lstlisting}{Testing on Maze 2}
+\subsection{Task 3 - RTA* Algorithm with Euclidean distance heuristic}
+The output pertaining to Maze 1 and 2 is listed below. The program behaves as expected and the output is correct.	
+\begin{lstlisting}
+3 ?- run(rta, h_e, 5/4/east, 1/1/_, Path).
+Path = [5/4/east, 5/2/south, 1/2/west, 1/1/south] ;
+false.	
+\end{lstlisting}
+\captionof{lstlisting}{Testing on Maze 1}
+\vspace{2 mm}
+\begin{lstlisting}
+7 ?- run(rta, h_e, 3/1/west, 6/9/_, Path).
+Path = [3/1/west, 6/1/east, 6/9/north] ;
+false.
+\end{lstlisting}
+\captionof{lstlisting}{Testing on Maze 2}
+\subsection{Task 4 - RTA* Algorithm with Manhattan distance heuristic}
+The output pertaining to Maze 1 and 2 is listed below. The program behaves as expected and the output is correct.	
+\begin{lstlisting}
+4 ?- run(rta, h_m, 5/4/east, 1/1/_, Path).
+Path = [5/4/east, 5/2/south, 1/2/west, 1/1/south] ;
+false	
+\end{lstlisting}
+\captionof{lstlisting}{Testing on Maze 1}
+\vspace{2 mm}
+\begin{lstlisting}
+8 ?- run(rta, h_m, 3/1/west, 6/9/_, Path).
+Path = [3/1/west, 6/1/east, 6/9/north] ;
+false.	
+\end{lstlisting}
+\captionof{lstlisting}{Testing on Maze 2}
+\subsection{Comparison of the Number of Generated Nodes}
+
+\forceindent The A* algorithm features a uniform-cost search and a pure heuristic search to efficiently compute optimal solutions. It is a best-first search algorithm in which the cost associated with a node is $f(n) = g(n) + h(n)$, where $g(n)$ is the cost of the path from the initial state to node n and $h(n)$ is the heuristic estimate or the cost of a path from node n to a goal. Thus, $f(n)$ estimates the lowest total cost of any solution path going through node n.\footcite{astar} The major drawback of A* however is its memory requirement as it must maintain, at the very minimum, the entire open list of nodes. This is why the number of generated nodes is higher in the test cases run on A* then it is on the cases running RTA*. RTA* does not find a complete solution until near the goal and thus saves time. \\
+
+\forceindent The assumption was made that the term ``generated node" meant all the different nodes that were displayed in the paths outputted during testing. The decision was made to add all the generated nodes of the \textbf{longest} path which was then recorded and stored in the tables below.
+
+
+\begin{table}[H]
+\centering
+\caption{Comparison of the Nodes Generated in Maze 1}
+\label{my-label}
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Algorithm} & \textbf{Heuristic} & \textbf{Number of Generated Nodes} \\ \hline
+A*                 & Euclidean Distance & 6                                  \\ \hline
+A*                 & Manhattan Distance & 6                                  \\ \hline
+RTA*               & Euclidean Distance & 4                                  \\ \hline
+RTA*               & Manhattan Distance & 4                                   \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Comparison of the Nodes Generated in Maze 2}
+\label{my-label}
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Algorithm} & \textbf{Heuristic} & \textbf{Number of Generated Nodes} \\ \hline
+A*                 & Euclidean Distance & 4                                  \\ \hline
+A*                 & Manhattan Distance & 4                                  \\ \hline
+RTA*               & Euclidean Distance & 3                                  \\ \hline
+RTA*               & Manhattan Distance & 3                                  \\ \hline
+\end{tabular}
+\end{table}
+
+
+\section{Difficulties Encountered}
+\forceindent Overall, this program was extremely challenging and time consuming. In general terms, the most difficult part of the implementation was probably the development of the auxiliary predicates for the movement patterns in each specific direction. Not only did built-in predicates need to be utilized but a lot of focus was needed to make sure that no wrong movement patterns were being implemented (i.e. moving in the right direction when coming in contact with obstacles). Many mistakes were caught during testing where the robot moved in the wrong direction or in some cases, went right through the hard coded obstacles. \\
+
+\textbf{Note:} Through out the program, built-in predicates were used that were a little difficult to understand, such as \textbf{asserta} and \textbf{retract}.
+\subsection{Counter Predicate}
+\forceindent The only functionality that was not implemented was the Counter Predicate. The code for the predicate is below.
+\begin{lstlisting} 
+	counter(C) :-
+			C_Updated is C + 1,
+			nl,
+			write('Nodes Generated: '),
+			write(C_Updated), 
+			nl.				
+\end{lstlisting}
+\captionof{lstlisting}{\textbf{counter} Predicate}
+\vspace{2 mm} 
+\forceindent This code segment is not included in the submitted code. Although this predicate appears to be correct, the location of where to output the Count value was unknown. It was unclear how to output the value when the robot approached an upcoming node, regardless of where any obstacles were. Since the \textbf{Counter} predicate is not functioning, it was impossible to find the number of generated nodes computationally. Therefore, an assumption (outlined earlier) was used to try to calculate the number of visited nodes manually.   
+
+\section{Appendix}
+\forceindent This report was jointly authored. Both members worked on the outline of each question together as a pair. The programming of the predicates was jointly done. Dinesh wrote the documentation and comments for each predicate while CJ wrote the test cases for each exercise.
+
+\section{Bibliography}
+\nocite{*}
+\doublespacing
+\renewcommand{\section}[2]{}%
+\printbibliography
+\end{document}
