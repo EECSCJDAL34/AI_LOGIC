@@ -1,0 +1,478 @@
+\documentclass[11pt]{article}
+\usepackage{subfig}
+\usepackage[top = 1in, bottom = 1in,
+left = 1in, right = 1in]{geometry}
+\usepackage{amsfonts}
+\usepackage{listings} 
+\usepackage{graphicx}
+\usepackage{subfig}
+\newcommand{\forceindent}{\leavevmode{\parindent=1em\indent}}
+\usepackage{MnSymbol}
+\usepackage{fancyvrb}
+\newcommand{\ts}{\textsuperscript}
+\usepackage{setspace}  
+\usepackage{float}
+\restylefloat{table}
+\usepackage{grffile}
+\usepackage{amsmath}
+
+
+
+\usepackage[style=verbose-ibid,backend=bibtex]{biblatex}
+
+\usepackage{filecontents}% to embed the file `myreferences.bib` in your `.tex` file
+
+\begin{filecontents}{r4.bib}
+\bibliographystyle{./IEEEtran}
+\bibliography{./IEEEabrv,./IEEEexample}
+
+@electronic{astar,
+  author        = "Robin",
+  title         = "A* Algorithm",
+  organization	= "World of Computing",
+  url           = "http://intelligence.worldofcomputing.net/ai-search/a-star-algorithm.html#.Vk3XKr9UUhU", 
+  note          = "December 18, 2009",  
+}
+
+\end{filecontents}
+
+
+\addbibresource{r4.bib}
+
+\begin{document}
+
+\title{\textbf{EECS 3401: Report 5 Documentation}}
+\author{\textbf{Camillo John (CJ) D'Alimonte}\\ (212754396 - cjdal34) \\
+\& \\
+\textbf{Dinesh Kalia}\\ (213273420 - dinesh49)}
+\date {\textbf{December 7, 2015}}
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Abstract}
+\forceindent This report summarizes the methodologies used to complete the series of tasks provided in the \emph{Report 5 Specification}. It provides a detailed analysis as to the reasoning behind certain chosen heuristics, the successful implementation of various predicates as well as any difficulties encountered throughout the assigned tasks.
+
+\section{Introduction}
+\forceindent The assigned series of exercises were geared towards achieving the following learning objectives.
+\begin{itemize}
+\item The frame representations of expert/knowledge based systems
+\item The computation of evidence sets for Bayesian networks
+\item The computation of Bayesian network probabilities
+\item The representation of Boolean and Multistate Bayesian networks
+\end{itemize}
+
+Both practical (programming-based) as well as theoretical (explanatory-based) exercises were given in an attempt to meet these learning outcomes.
+
+\section{Exercise 1: Expert Systems}
+\forceindent Given the inheritance structure for various figures, as shown in Figure 1, and the attribute-value pairs, as shown in Table 1, the goal was to construct a frame representation for the figures and their attributes by creating the indicated instances of the leaf types. The appropriate \textbf{side\_count}, \textbf{boundary\_length}, and \textbf{area} predicates had to be utilized. Each instance of the four-sided polygons needed a length specified for each of the sides, as shown in Figure 2.
+
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 4in]{InheritanceDiagram.png}}
+    \caption{Inheritance diagrams for a collection of figures}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 2in]{Polygon.png}}
+    \caption{Order of side lengths for four-sided polygons. Sides 1 and 3 are parallel lines.}
+\end{figure}
+
+\begin{table} [h!]
+  \centering
+{\includegraphics[width = 4in]{Table.png}}
+    \caption{Attribute-value pairs. Instances are to have the given names}
+\end{table}
+
+\subsection{Assumptions}
+\forceindent There were no assumptions made for this particular exercise. All instructions were clear.
+
+\subsection{Design \& Implementation}
+\forceindent The implementation process for this specific exercise was rather routine. The only misunderstanding was the fact that there was an assumption that \textbf{execute} was a predicate when in fact it is actually a functor of a compound term used to distinguish a literal slot value and a value that needed to be computed.\\
+\forceindent The areas of the \textbf{four\_sided\_polygon} were calculated in one predicate using an or statement with the continuity of the program dependent on the use of cut. Given the formulas to calculate these areas, as shown below, programming these calculations proved to be simple. The code for such calculations is shown below.\\
+\\
+Area of Rectangle: $A = lw$ \\
+Area of Trapezoid: $A = \displaystyle \frac{a+b}{2}h$\\ 
+Area of Parallelogram: $A=bh$\\
+\begin{lstlisting}
+four_sided_area(Object, Value) :-
+	( 	parent(Object, P), 
+		(P = 'rectangle' ; P = 'parallelogram'),
+		value(Object, height, Height),
+		value(Object, side_length, [Side_1|_]),
+		Value is Height*Side_1
+	),!
+	;
+	( 	parent(Object, P), 
+		P = 'trapezoid',
+		value(Object, height, Height),
+		value(Object, side_length, [Side_1, _, Side_3|_]),
+		Value is (Side_3+Side_1)*Height/2
+	).
+\end{lstlisting}
+\captionof{lstlisting}{\textbf{four\_sided\_area} predicate} 
+\vspace{0.5cm}
+\forceindent The calculations for the areas of \textbf{regular\_polygon} figures were divided into three different predicates; one for each specific feature. This was done as none of the shapes shared a similar feature, unlike the relationship between parallelograms and rectangles. The formulas for the areas of these figures are provided below as well as one example of an area predicate. \\
+\\
+Area of Square: $A = a^2$ \\
+Area of Pentagon: $A = \displaystyle \frac{1}{4}\sqrt{5(5+2\sqrt{5})}a^2$\\ 
+Area of Equilateral Triangle: $A=\displaystyle \frac{\sqrt{3}}{4}a^2$\\
+
+\forceindent The calculation of the area of each \textbf{regular\_polygon} was similar to the \textbf{pentagon\_area} predicate as shown below.\\
+
+\begin{lstlisting}
+pentagon_area(Object, Value) :- 
+	value(Object, side_length, Side_length),
+	Value is sqrt(5*(5+2*sqrt(5)))*Side_length*Side_length/4.
+\end{lstlisting}
+\captionof{lstlisting}{\textbf{pentagon\_area} predicate} 
+\vspace{0.5cm}
+\forceindent The side lengths and heights of the shapes were randomly chosen. In this case, the \textbf{side\_length} of the pentagon was 9. Overall, the hard-coding of the various features and attributes was straightforward and there was no real algorithmic reasoning behind the program. Rather, the work was tedious and self-explanatory.
+ 
+\subsection{Testing}
+\forceindent Some basic test cases were used to determine whether or not the areas of each of the 6 different polygons were indeed calculated correctly. As with the case of developing the program, there was no considerable algorithmic challenge to writing these test cases. It was all a matter of determining if Prolog calculated the same values as the ones obtained through manual calculation. All test cases passed as expected.
+
+\begin{lstlisting}
+:- begin_tests(e1).
+test(square) :- value(square_1, area, 16).
+test(equilateraltriangle) :- value(eq_triangle_1, area, 15.588457268119896).
+test(pentagon) :- value(pentagon_1, area, 139.35866944770632).
+test(parallelogram) :- value(parallelogram_1, area, 20).
+test(rectangle) :- value(rectangle_1, area, 24).
+test(trapezoid) :- value(trapezoid_1, area, 24).
+:- end_tests(e1).
+\end{lstlisting}
+\captionof{lstlisting}{Test Cases for Exercise 1}
+
+\subsection{Difficulties Encountered}
+\forceindent There were no major difficulties encountered during this exercise. Although extra care had to be used to ensure the calculations were done correctly, the process was in itself routine.
+
+
+\section{Exercise 2: Evidence Sets and D-Separation}
+\forceindent Given the Bayesian network in Figure 1, the goal was to find all evidence sets that d-separate node A and node H. A justification based on the three conditions that block the connection path between nodes was needed for each set.
+
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 2in]{BayesianNetwork.png}}
+    \caption{Bayesian network for the evidence set exercise}
+\end{figure}
+\vspace{-0.5cm}
+\subsection{Assumptions}
+\forceindent The assumption was made that the statement ``all evidence sets" refers only to \emph{non-trivial} sets of evidence nodes. Without this assumption, there would exist far too many sets to reasonably justify and the use of these ``extra" nodes would not assist in solving this exercise in any way. An assumption was also made to exclude nodes $A$ and $H$ in the sets since it would be meaningless to include them.
+\subsection{Solution}
+The evidence sets that d-separate node $A$ and node $H$ are the following: 
+\begin{itemize}
+\item $\mathbf{\{B,C\}}$
+\item $\mathbf{\{B,F,E\}}$
+\end{itemize} 
+\subsection{Justification} 
+$\mathbf{\{B,C\}}$: Evidence is entered at $A$ and it affects $B$. Since $B$ is part of a converging d-connection triad of nodes with $A$ and $C$ as parents, according to the common effect condition, any evidence at $B$ results in evidence transmitted to its parents, $A$ and $C$. Therefore the evidence propagated from $A$ to $B$ influences $C$. $C$ is a part of a diverging d-connection triad of nodes where $B$ and $D$ share a common parent in $C$. According to the common cause condition, the evidence from $B$ to $D$ is blocked when $C$ has hard evidence. Although $C$ has not been explicitly hard-coded, it is in a serial connection with $D$ and $G$. According to the casual trial condition, a serial connection from $C$ to $G$ is blocked when there is hard evidence along the path. Since $G$ is hard-coded, the path to $C$ becomes blocked. As $C$ implicitly becomes hard evidence, the divergence connection between $B$ and $C$ fails and thus the connection is blocked. Therefore, the d-connection is broken and there exists a d-separation from node $A$ and node $H$ along the evidence set $\mathbf{\{B,C\}}$.  
+
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 6in]{BC Justification.png}}
+    \caption{Diagram for the $\mathbf{\{B,C\}}$ Evidence Set }
+\end{figure}
+
+\noindent $\mathbf{\{B,F,E\}}$: Evidence is entered at $A$ and it affects $B$. Since $B$ is part of a converging d-connection triad of nodes with $A$ and $C$ as parents, according to the common effect condition, any evidence at $B$ results in evidence transmitted to its parents, $A$ and $C$. Therefore the evidence propagated from $A$ to $B$ influences $C$. $C$ is in a serial connection with $F$ to form a path from $B$ to $F$ via $C$. According to the causal trial condition, a serial connection is only blocked if there exists hard evidence at $C$. This is not the case. $F$ becomes influenced by $C$. $F$ forms a diverging d-connection triad of nodes with $C$ and $E$ as descendants. According to the common cause condition, $C$ and $E$ are only blocked if $F$ has hard evidence which in this case, it does not. Therefore $E$ becomes influenced by $F$. $D$ forms a converging d-connection triad of nodes with $C$ and $E$ and thus, according to common effect condition, can only maintain a path if evidence of $D$ is found. Although $G$ is hard-coded, according to the casual trial condition, the serial connection between $C$ and $G$ breaks and thus the convergence connection must be blocked as well. Since no d-connection exists, there is a d-separation from $A$ to $H$.  
+
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 6in]{BFE Justification.png}}
+    \caption{Diagram for the $\mathbf{\{B,F,E\}}$ Evidence Set }
+\end{figure}
+\vspace{-0.5cm}
+\subsection{Difficulties Encountered}
+\forceindent This exercise was both ambiguous and quite difficult as this was a relatively new concept recently learned and there had not been too many examples discussed in both the class lectures or textbook.
+
+\section{Exercise 3: Medical Diagnosis Bayesian Network}
+\forceindent Given the Bayesian network shown in Figure 6, the goal was to determines the probability of a patient having tuberculosis, lung cancer or bronchitis. There were two causal factors --- smoking and whether the patient had been to Asia recently. There were two additional pieces of evidence available at our disposal --- whether the patient was suffering from shortness of breath (dyspnoea) or whether a positive, or negative X-ray test result was available.\\
+
+\forceindent The overall objective of this exercise was to compute the following probabilities in Prolog and by hand using the node probability tables as shown in Figure 7. \\
+\\
+\\
+$P(dyspnoea) = ?$ \\
+$P(smoker\,|\,tuberculosis \textunderscore or \textunderscore cancer) = ?$\\
+
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 3in]{MedicalNetwork.png}}
+    \caption{Bayesian network describing tuberculosis or cancer diagnosis}
+\end{figure}
+
+\subsection{Design \& Implementation}
+
+\forceindent The first part in implementing this exercise was the need to establish the parent and child relationship from the given Bayesian network. Using the \textbf{parent} predicate, the relationships were hard-coded in as follows.
+
+\begin{lstlisting}
+parent(asia, tuberculosis).    				 
+parent(smoker, lungCancer).    				 
+parent(smoker2, bronchitis).   				
+parent(tuberculosis, tuberculosisOrCancer).  
+parent(lungCancer, tuberculosisOrCancer).    
+parent(tuberculosisOrCancer, positiveXray).  
+parent(tuberculosisOrCancer, dyspnoea).      
+parent(bronchitis, dyspnoea).		    	 
+\end{lstlisting}
+\captionof{lstlisting}{Parent and Descendant Relationships}
+\vspace{0.5cm}
+\forceindent Once the relationships were established, the probability of each specific event had to be hard-coded into the program. Using the provided node probability tables, as shown in Figure 7, the correct corresponding probability was assigned to each event. The probabilities were calculated directly from the table provided or in some cases, carefully deduced from related facts. The hard-coding of these facts is seen below.
+
+\begin{lstlisting}
+p(asia, 0.01).
+p(smoker, 0.5).
+p(smoker2, 0.5).
+p(tuberculosis, [asia], 0.05).
+p(tuberculosis, [~asia], 0.01).
+p(lungCancer, [smoker], 0.1).
+p(lungCancer, [~smoker], 0.01).
+p(bronchitis, [smoker2], 0.6).
+p(bronchitis, [~smoker2], 0.3).
+p(tuberculosisOrCancer, [tuberculosis, lungCancer], 1).
+p(tuberculosisOrCancer, [tuberculosis, ~lungCancer], 1).
+p(tuberculosisOrCancer, [~tuberculosis, lungCancer], 1).
+p(tuberculosisOrCancer, [~tuberculosis, ~lungCancer], 0.0).
+p(positiveXray, [tuberculosisOrCancer], 0.98).
+p(positiveXray, [~tuberculosisOrCancer], 0.05).
+p(dyspnoea, [tuberculosisOrCancer, bronchitis], 0.9).
+p(dyspnoea, [tuberculosisOrCancer, ~bronchitis], 0.7).
+p(dyspnoea, [~tuberculosisOrCancer, bronchitis], 0.8).
+p(dyspnoea, [~tuberculosisOrCancer, ~bronchitis], 0.1).
+\end{lstlisting}
+\captionof{lstlisting}{Probabilities of Certain Events}
+
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 5in]{NBT.png}}
+    \caption{Node probability tables for the model in Figure 6}
+\end{figure}
+
+\subsection{Prolog Results}
+\forceindent Since the values were correctly stored, the probabilities could be calculated. In order to obtain the results from Prolog, a simple \textbf{run} predicate was built to output the findings. The \textbf{run} predicate is included below: 
+
+
+\begin{lstlisting}
+run(e3) :-
+prob([ dyspnoea], [ ], Probability1),
+prob([ smoker], [ tuberculosisOrCancer], Probability2),
+write('P( dyspnoea ) = '), write(Probability1), nl,
+write('P( smoker | tuberculosis_or_cancer ) = '), write(Probability2).
+\end{lstlisting}
+\captionof{lstlisting}{\textbf{run} predicate}
+\vspace{0.5cm}
+The resulting output is shown below. Therefore, according to the Prolog program:\\
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 4in]{Output.png}}
+    \caption{Terminal Output}
+\end{figure}
+\vspace{0.5cm}
+
+$P(dyspnoea) = 0.43931050$ \\
+$P(smoker\,|\,tuberculosis \textunderscore or \textunderscore cancer) = 0.8434627013019066$\\
+
+\subsection{Manual Calculations}
+
+$P(dyspnoea):$ \\
+
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 4in]{2.31st.png}}
+    \caption{Manual Calculations for $P(dyspnoea)$ - Part 1 }
+\end{figure} 
+
+
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 6in]{2.31st(2).png}}
+    \caption{Manual Calculations for $P(dyspnoea)$ - Part 2 }
+\end{figure} 
+ 
+\clearpage
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 7.4in]{2.31st(3).png}}
+    \caption{Manual Calculations for $P(dyspnoea)$ - Part 3 }
+\end{figure} 
+ 
+\clearpage 
+$P(smoker\,|\,tuberculosis \textunderscore or \textunderscore cancer): $ \\
+
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 6in]{2.32nd.png}}
+    \caption{Manual Calculations for $P(smoker\,|\,tuberculosis \textunderscore or \textunderscore cancer)$ - Part 1 }
+\end{figure} 
+
+
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 7in]{2.32nd(2).png}}
+    \caption{Manual Calculations for $P(smoker\,|\,tuberculosis \textunderscore or \textunderscore cancer)$ - Part 2 }
+\end{figure} 
+
+
+\section{Exercise 4: Monty Hall Dilemma Bayesian Network}
+\forceindent Similar to that of Exercise 3, a Bayesian network, as shown in Figure 14, was given in an attempt to solve a simplified version of the Monty Hall dilemma. The goal was to calculate the probability of $P(prize \textunderscore door=green \,|\, door \textunderscore shown=blue , picked \textunderscore door = red)$. \\
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 3in]{MontyHall.png}}
+    \caption{Monty Hall Dilemma Bayesian Network}
+\end{figure}
+
+
+\subsection{Design \& Implementation}
+\forceindent This exercise reinforced the programming concepts utilized in the previous exercise. The only difference in this particular question was the considering of multiple states. The difficultly in writing the code remained the same and the overall process to which the results were obtained did not change from Exercise 3 to Exercise 4.\\
+
+\forceindent The first part in implementing this exercise was the need to establish the parent and child relationship from the given Bayesian network. Using the \textbf{parent} predicate, the relationships were hard-coded in as follows.
+\begin{lstlisting}
+parent(prizeDoor, doorShown).    
+parent(doorPicked, doorShown).
+\end{lstlisting}
+\captionof{lstlisting}{Parent and Descendant Relationships}
+\vspace{0.5cm}
+\forceindent Once the relationships were established, the probability of each specific event had to be hard-coded into the program. Notice how there are many more probabilities to consider in this exercise compared to the last exercise. This is a direct result of the use of multiple states. Using the provided node probability tables, as shown in Figure 15, the correct corresponding probability was assigned to each event. The probabilities were calculated directly from the table provided or in some cases, carefully deduced from related facts. The hard-coding of these facts is seen below.
+
+\begin{lstlisting}
+p(prizeDoor=red, 0.333).
+p(prizeDoor=blue, 0.333).
+p(prizeDoor=green, 0.333).
+p(doorPicked=red, 0.333).
+p(doorPicked=blue, 0.333).
+p(doorPicked=green, 0.333).
+
+p(doorShown=red, [prizeDoor=red, doorPicked=red], 0.0).
+p(doorShown=red, [prizeDoor=red, doorPicked=blue],  0.0).
+p(doorShown=red, [prizeDoor=red,  doorPicked=green], 0.0).
+p(doorShown=blue, [prizeDoor=red, doorPicked=red], 0.5).
+p(doorShown=blue, [prizeDoor=red, doorPicked=blue],  0.0).
+p(doorShown=blue, [prizeDoor=red,  doorPicked=green], 0.0).
+p(doorShown=green, [prizeDoor=red, doorPicked=red], 0.5).
+p(doorShown=green, [prizeDoor=red, doorPicked=blue],  1.0).
+p(doorShown=green, [prizeDoor=red,  doorPicked=green], 0.0).
+
+p(doorShown=red, [prizeDoor=blue, doorPicked=red], 0.0).
+p(doorShown=red, [prizeDoor=blue, doorPicked=blue],  0.5).
+p(doorShown=red, [prizeDoor=blue,  doorPicked=green], 1.0).
+p(doorShown=blue, [prizeDoor=blue, doorPicked=red], 0.0).
+p(doorShown=blue, [prizeDoor=blue, doorPicked=blue],  0.0).
+p(doorShown=blue, [prizeDoor=blue,  doorPicked=green], 0.0).
+p(doorShown=green, [prizeDoor=blue, doorPicked=red], 1.0).
+p(doorShown=green, [prizeDoor=blue, doorPicked=blue],  0.5).
+p(doorShown=green, [prizeDoor=blue,  doorPicked=green], 0.0).
+
+p(doorShown=red, [prizeDoor=green, doorPicked=red], 0.0).
+p(doorShown=red, [prizeDoor=green, doorPicked=blue],  1.0).
+p(doorShown=red, [prizeDoor=green,  doorPicked=green], 0.5).
+p(doorShown=blue, [prizeDoor=green, doorPicked=red], 1.0).
+p(doorShown=blue, [prizeDoor=green, doorPicked=blue],  0.0).
+p(doorShown=blue, [prizeDoor=green,  doorPicked=green], 0.5).
+p(doorShown=green, [prizeDoor=green, doorPicked=red], 0.0).
+p(doorShown=green, [prizeDoor=green, doorPicked=blue],  0.0).
+p(doorShown=green, [prizeDoor=green,  doorPicked=green], 0.0).
+\end{lstlisting}
+\captionof{lstlisting}{Probabilities of Certain Events}
+
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 5in]{MHDTables.png}}
+    \caption{Node probability tables for the model in Figure 9}
+\end{figure}
+
+\subsection{Prolog Results}
+\forceindent Since the values were correctly stored, the probabilities could be calculated. In order to obtain the results from Prolog, a simple \textbf{run} predicate was built to output the findings. The \textbf{run} predicate is included below: 
+
+
+\begin{lstlisting}
+run(e4) :-
+prob(prizeDoor=green, [ doorShown=blue, doorPicked=red], Prob1), nl,
+write('P( prizeDoor=green | doorShown=blue, doorPicked=red ) = '), write(Prob1).
+\end{lstlisting}
+\captionof{lstlisting}{\textbf{run} predicate}
+\vspace{0.5cm}
+The resulting output is shown below. Therefore, according to the Prolog program:\\
+\begin{figure}[h!]
+  \centering
+{\includegraphics[width = 5in]{MHDOutput.png}}
+    \caption{Terminal Output}
+\end{figure}
+\vspace{0.1cm}
+\\
+$P(prize \textunderscore door=green \,|\, door \textunderscore shown=blue , picked \textunderscore door = red) = 0.6666666666666$\\
+
+\subsection{Manual Calculations}
+Unable to complete...the formulas became a ``mess" and were extremely difficult to follow.
+\section{Exercise 5: Boolean and Multistate Algorithm Comparison}
+The following is a list of differences between the Boolean and Multistate Bayesian Algorithms. A reasoning behind each difference is included.
+\begin{itemize}
+\item There is a substantial difference in how the two files conclude that the Cond implies X is false. In Listing 10, the program checks to see if the negation of X is a member of the network and if so, cuts. The probability of \textasciitilde X is simply calculated as 1-(the probability of X). This simple process works in this case because there is only 1 state of the node to consider. On the other hand, in Listing 11, multiple states have to be considered and hence, a compound term X is formed. The compound term determines if state K, regardless of other states before or after it, is included in the network. K's state is opposite of X's and thus, Cond implies that X is false. 
+\begin{lstlisting}
+prob(X, Cond, 0) :-              
+    member(~ X, Cond), !.
+
+prob(~ X, Cond, P) :- !,        
+    prob(X, Cond, P0),
+    P is 1 - P0.
+\end{lstlisting}
+\captionof{lstlisting}{f16\_4\_BayesianNet.pl}
+
+\begin{lstlisting}
+prob(X, Cond, 0) :-            
+    X =.. [_, K, _] ,
+    hasNode(K, Cond) , !.
+\end{lstlisting}
+\captionof{lstlisting}{bayesianNet\_multistate.pl}
+\item The following code was added to the original definition of \textbf{predecessor} from  \textbf{f16\_4\_BayesianNet.pl} as there needed to be a way to extract the node name from
+the state, variable=value, pair.
+\begin{lstlisting}
+predecessor(X, Y) :-
+    X =.. [_,Xf,_], Y =.. [_,Yf, _],
+    parent(Xf, Yf).
+
+predecessor(X, Z) :-
+    X =.. [_,Xf,_], Z =.. [_,Zf, _],
+    parent(Xf, Y),
+    predecessor(Y, Zf).
+\end{lstlisting}
+\captionof{lstlisting}{bayesianNet\_multistate.pl}
+\item There is a minor difference between the two programs in their use of Bayes' rule if the condition involves a descendant of X. The \textbf{bayesianNet\_multistate.pl} program has an extra clasuse that determines that if the probability of Py = 0 and \textbf{predecessor(X,Y)} is true, then the probability of P = 1. If this is not the case, then the calculation of the probability of P is the same in both programs, regardless of the number of states.
+
+\begin{lstlisting}
+prob(X, Cond0, P) :-
+    mydelete(Y, Cond0, Cond),
+    predecessor(X, Y), !,       
+    prob(X, Cond, Px),
+    prob(Y, [X | Cond], PyGivenX),
+    prob(Y, Cond, Py),
+    P is Px * PyGivenX / Py.   
+\end{lstlisting}
+\captionof{lstlisting}{f16\_4\_BayesianNet.pl}
+
+\begin{lstlisting}
+prob(X, Cond0, P) :-
+    mydelete(Y, Cond0, Cond),
+    predecessor(X, Y), !,      
+    prob(X, Cond, Px),
+    prob(Y, [X | Cond], PyGivenX),
+    prob(Y, Cond, Py),
+    ( Py = 0,  P = 1, !
+    ; 
+      P is Px * PyGivenX / Py   
+    ).
+\end{lstlisting}
+\captionof{lstlisting}{bayesianNet\_multistate.pl}
+\end{itemize}
+
+\section{Conclusion}
+\forceindent The majority of the learning objectives were met through the completion of the assigned exercises although there were specific parts that lead to some struggle. Both the second and fifth questions were difficult and the manual calculations proved to be tedious and prone to error. Overall, however, much was learned about Bayesian networks and Expert systems.
+  
+
+\section{Appendix}
+\forceindent This report was jointly authored. Both members worked on the outline of each question together as a pair. The programming of the predicates was jointly done. Dinesh wrote the documentation and comments for each predicate while CJ wrote the test cases for each exercise.
+
+\nocite{*}
+\doublespacing
+\renewcommand{\section}[2]{}%
+\end{document}
